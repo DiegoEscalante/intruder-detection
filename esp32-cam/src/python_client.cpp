@@ -23,6 +23,10 @@ bool python_client_init(void) {
 
 // Periodically broadcast UDP discovery request to Python server port
 void python_client_discover(void) {
+  if (s_python_server_known) {
+    return;
+  }
+
   if (millis() - s_last_discovery < DISCOVERY_INTERVAL) {
     return;
   }
@@ -45,6 +49,10 @@ void python_client_discover(void) {
 
 // Parse incoming UDP response (format: PYTHON_SERVER:<ip>:<port>)
 void python_client_process_discovery(void) {
+  if (s_python_server_known) {
+    return;
+  }
+
   int packetSize = s_discovery_udp.parsePacket();
 
   if (packetSize <= 0) {
@@ -123,6 +131,11 @@ void python_client_notify_change(void) {
     String responseBody = http.getString();
     Serial.print("Respuesta: ");
     Serial.println(responseBody);
+  } else {
+    Serial.print("Error conectando con servidor Python: ");
+    Serial.println(http.errorToString(response).c_str());
+    Serial.println("Reiniciando búsqueda de servidor...");
+    s_python_server_known = false;
   }
 
   http.end();
