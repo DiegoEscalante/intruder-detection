@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 from datetime import datetime, timedelta
 from typing import Optional, AsyncGenerator
@@ -31,20 +32,28 @@ class ESP32Client:
             return f"http://{self.ip}/capture"
         return None
 
-    async def fetch_snapshot(self, timeout: float = 4.0) -> Optional[bytes]:
-        """Fetches a high-resolution snapshot still from ESP32 /capture."""
+    async def fetch_snapshot(self, timeout: float = 8.0, retries: int = 2) -> Optional[bytes]:
+        """Fetches a high-resolution snapshot still from ESP32 /capture with retry capability."""
         if not self.ip:
             return None
 
         url = f"http://{self.ip}/capture"
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                res = await client.get(url)
-                if res.status_code == 200 and len(res.content) > 0:
-                    self.last_seen = datetime.now()
-                    return res.content
-        except Exception as e:
-            print(f"[ESP32Client] Error capturando imagen desde {url}: {e}")
+        for attempt in range(1, retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    res = await client.get(url)
+                    if res.status_code == 200 and len(res.content) > 0:
+                        self.last_seen = datetime.now()
+                        return res.content
+                    else:
+                        print(f"[ESP32Client] Respuesta inesperada desde {url}: HTTP {res.status_code} ({len(res.content)} bytes)")
+            except Exception as e:
+                err_desc = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+                print(f"[ESP32Client] Intento {attempt}/{retries} error capturando imagen desde {url}: {err_desc}")
+
+            if attempt < retries:
+                await asyncio.sleep(0.3)
+
         return None
 
     async def stream_generator(self) -> AsyncGenerator[bytes, None]:
