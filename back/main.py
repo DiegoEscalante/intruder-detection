@@ -1,5 +1,13 @@
+import sys
 import asyncio
 from contextlib import asynccontextmanager
+
+# Configure Windows console stdout/stderr encoding to prevent charmap errors
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -7,6 +15,7 @@ from app.database import init_db
 from app.discovery import start_discovery_service, stop_discovery_service
 from app.websocket_manager import ws_manager
 from app.routes import esp_events, schedules, alerts, system, stream
+from app.surveillance_service import continuous_surveillance_worker
 
 
 @asynccontextmanager
@@ -26,11 +35,20 @@ async def lifespan(app: FastAPI):
     print(f"[Network] IP de anuncio local: {settings.ADVERTISED_IP}")
     print(f"[Network] Servidor HTTP listo en http://{settings.SERVER_HOST}:{settings.SERVER_PORT}")
     print(f"[Documentation] Documentación Swagger disponible en /docs")
+
+    # 3. Start continuous background OpenCV person surveillance worker
+    surveillance_task = asyncio.create_task(continuous_surveillance_worker())
+    print("[Surveillance] Motor de visión artificial activo en todo momento.")
     print("=" * 60)
 
     yield
 
     # Shutdown logic
+    surveillance_task.cancel()
+    try:
+        await surveillance_task
+    except asyncio.CancelledError:
+        pass
     stop_discovery_service()
     print("[Shutdown] Servidor detenido de manera ordenada.")
 

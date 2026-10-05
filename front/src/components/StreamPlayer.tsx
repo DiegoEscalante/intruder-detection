@@ -7,11 +7,12 @@ import {
   ActivityIndicator,
   Modal,
   Platform,
+  Alert as NativeAlert,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../theme/tokens';
-import { getBaseUrl, getStreamProxyUrl } from '../services/api';
+import { getBaseUrl, getStreamProxyUrl, detectPersonNow } from '../services/api';
 
 interface StreamPlayerProps {
   espConnected: boolean;
@@ -62,6 +63,31 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
     setStreamSource((prev) => (prev === 'direct' ? 'proxy' : 'direct'));
     setStreamKey((prev) => prev + 1);
     setIsLoading(true);
+  };
+
+  const [isScanningPerson, setIsScanningPerson] = useState(false);
+
+  const handleScanPerson = async () => {
+    if (isScanningPerson) return;
+    setIsScanningPerson(true);
+    try {
+      const res = await detectPersonNow();
+      if (res.person_detected) {
+        NativeAlert.alert(
+          '🚨 Detección OpenCV Positiva',
+          `Se identificó presencia humana en el cuadro actual:\n\n• Sujetos: ${res.count}\n• Categorías: ${res.labels.join(', ')}`
+        );
+      } else {
+        NativeAlert.alert(
+          '🛡️ Análisis OpenCV',
+          'El modelo de visión artificial analizó el cuadro y no detectó siluetas humanas (estado nominal).'
+        );
+      }
+    } catch (err: any) {
+      NativeAlert.alert('Error OpenCV', err.message || 'No se pudo procesar el análisis de personas.');
+    } finally {
+      setIsScanningPerson(false);
+    }
   };
 
   const mjpegHtml = `
@@ -141,6 +167,23 @@ export const StreamPlayer: React.FC<StreamPlayerProps> = ({
 
         {/* HUD Bottom Right: Stream Controls */}
         <View style={styles.hudBottomRight}>
+          <TouchableOpacity
+            style={styles.hudBtn}
+            onPress={handleScanPerson}
+            disabled={isScanningPerson}
+            activeOpacity={0.8}
+          >
+            {isScanningPerson ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <MaterialCommunityIcons
+                name="account-search-outline"
+                size={18}
+                color={Colors.hudText}
+              />
+            )}
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.hudBtn}
             onPress={toggleStreamSource}

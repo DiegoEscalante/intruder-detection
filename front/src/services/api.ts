@@ -156,3 +156,12 @@ export function getAlertImageUrl(alertId: number): string {
 export function getStreamProxyUrl(): string {
   return `${CURRENT_BASE_URL}/api/stream`;
 }
+
+export async function detectPersonNow(): Promise<{
+  person_detected: boolean;
+  count: number;
+  labels: string[];
+}> {
+  return request('/api/detect-person');
+}
+

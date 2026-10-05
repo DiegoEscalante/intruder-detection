@@ -79,16 +79,60 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Status Badge & ID */}
           <View style={styles.topStatusRow}>
-            <View style={styles.statusPill}>
-              <MaterialCommunityIcons name="alert-decagram" size={16} color={Colors.tertiaryActive} />
-              <Text style={styles.statusPillText}>Alerta de intrusión</Text>
+            <View
+              style={[
+                styles.statusPill,
+                alert.trigger_type === 'person_detected'
+                  ? styles.statusPillPerson
+                  : alert.trigger_type === 'manual_test'
+                  ? styles.statusPillTest
+                  : styles.statusPillMotion,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={
+                  alert.trigger_type === 'person_detected'
+                    ? 'account-alert'
+                    : alert.trigger_type === 'manual_test'
+                    ? 'test-tube'
+                    : 'motion-sensor'
+                }
+                size={16}
+                color={
+                  alert.trigger_type === 'person_detected'
+                    ? Colors.tertiaryActive
+                    : alert.trigger_type === 'manual_test'
+                    ? Colors.primary
+                    : '#b45309'
+                }
+              />
+              <Text
+                style={[
+                  styles.statusPillText,
+                  alert.trigger_type === 'person_detected'
+                    ? styles.statusPillTextPerson
+                    : alert.trigger_type === 'manual_test'
+                    ? styles.statusPillTextTest
+                    : styles.statusPillTextMotion,
+                ]}
+              >
+                {alert.trigger_type === 'person_detected'
+                  ? '🚨 Persona detectada'
+                  : alert.trigger_type === 'manual_test'
+                  ? 'Prueba manual'
+                  : 'Movimiento detectado'}
+              </Text>
             </View>
             <Text style={styles.alertIdText}>#ESP-{alert.id}</Text>
           </View>
 
           {/* Heading */}
           <Text style={styles.mainTitle}>
-            {alert.trigger_type === 'change_detected' ? 'Intrusión confirmada' : 'Prueba de sistema'}
+            {alert.trigger_type === 'person_detected'
+              ? 'Presencia Humana Confirmada'
+              : alert.trigger_type === 'manual_test'
+              ? 'Prueba de sistema'
+              : 'Movimiento en zona vigilada'}
           </Text>
           <View style={styles.dateRow}>
             <Ionicons name="time-outline" size={16} color={Colors.outline} />
@@ -118,12 +162,24 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
                 {/* Overlay Top Badge */}
                 <View style={styles.imageOverlayTop}>
                   <View style={styles.pingDot} />
-                  <Text style={styles.imageOverlayTopText}>CAPTURA ESP32-CAM</Text>
+                  <Text style={styles.imageOverlayTopText}>
+                    {alert.trigger_type === 'person_detected'
+                      ? 'OPENCV AI · PERSONA'
+                      : 'CAPTURA ESP32-CAM'}
+                  </Text>
                 </View>
                 {/* Overlay Bottom Caption */}
                 <View style={styles.imageOverlayBottom}>
-                  <Text style={styles.imageOverlayCaption}>EVIDENCIA FOTOGRÁFICA</Text>
-                  <Text style={styles.imageOverlaySub}>QVGA · ALGORITMO DIFERENCIA CUADROS</Text>
+                  <Text style={styles.imageOverlayCaption}>
+                    {alert.trigger_type === 'person_detected'
+                      ? 'EVIDENCIA: SUJETO IDENTIFICADO'
+                      : 'EVIDENCIA FOTOGRÁFICA'}
+                  </Text>
+                  <Text style={styles.imageOverlaySub}>
+                    {alert.trigger_type === 'person_detected'
+                      ? 'BOUNDING BOX TÁCTICO · HOG + CASCADES'
+                      : 'QVGA · ALGORITMO DIFERENCIA CUADROS'}
+                  </Text>
                 </View>
               </View>
             ) : (
@@ -161,14 +217,28 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             <View style={styles.telemetryRow}>
               <View style={styles.rowLeft}>
                 <View style={styles.iconCircle}>
-                  <MaterialCommunityIcons name="motion-sensor" size={18} color={Colors.tertiaryActive} />
+                  <MaterialCommunityIcons
+                    name={
+                      alert.trigger_type === 'person_detected'
+                        ? 'account-search'
+                        : 'motion-sensor'
+                    }
+                    size={18}
+                    color={
+                      alert.trigger_type === 'person_detected'
+                        ? Colors.tertiaryActive
+                        : Colors.primary
+                    }
+                  />
                 </View>
-                <View>
-                  <Text style={styles.rowLabel}>Sensor / Disparo</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowLabel}>Sensor / Algoritmo CV</Text>
                   <Text style={styles.rowValue}>
-                    {alert.trigger_type === 'change_detected'
-                      ? 'Diferencia visual de cuadros (Luminancia)'
-                      : 'Disparo manual desde App'}
+                    {alert.trigger_type === 'person_detected'
+                      ? 'OpenCV HOG + Haar Cascades (Detección Humana)'
+                      : alert.trigger_type === 'manual_test'
+                      ? 'Disparo manual desde App'
+                      : 'Diferencia visual de cuadros (Luminancia ESP32)'}
                   </Text>
                 </View>
               </View>
@@ -279,16 +349,32 @@ const styles = StyleSheet.create({
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fee2e2',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
     gap: 6,
   },
+  statusPillPerson: {
+    backgroundColor: '#fee2e2',
+  },
+  statusPillMotion: {
+    backgroundColor: '#fef3c7',
+  },
+  statusPillTest: {
+    backgroundColor: Colors.surfaceContainer,
+  },
   statusPillText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  statusPillTextPerson: {
     color: Colors.tertiaryActive,
+  },
+  statusPillTextMotion: {
+    color: '#b45309',
+  },
+  statusPillTextTest: {
+    color: Colors.primary,
   },
   alertIdText: {
     fontSize: 12,

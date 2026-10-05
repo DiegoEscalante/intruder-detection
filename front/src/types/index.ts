@@ -63,6 +63,7 @@ export interface ConfigSettings {
   smtp_port: number;
   smtp_user: string;
   cooldown_seconds: number;
+  person_cooldown_seconds?: number;
 }
 
 export interface WebSocketEventMessage {

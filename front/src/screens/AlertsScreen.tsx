@@ -29,9 +29,10 @@ export const AlertsScreen: React.FC<AlertsScreenProps> = ({
   isRefreshing,
   onDeleteAlert,
 }) => {
-  const [filter, setFilter] = useState<'all' | 'with_image' | 'test'>('all');
+  const [filter, setFilter] = useState<'all' | 'person' | 'with_image' | 'test'>('all');
 
   const filteredAlerts = alerts.filter((a) => {
+    if (filter === 'person') return a.trigger_type === 'person_detected';
     if (filter === 'with_image') return !!a.image_url;
     if (filter === 'test') return a.trigger_type === 'manual_test';
     return true;
@@ -81,6 +82,20 @@ export const AlertsScreen: React.FC<AlertsScreenProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.filterTab, filter === 'person' && styles.filterTabActive]}
+            onPress={() => setFilter('person')}
+          >
+            <Text
+              style={[
+                styles.filterTabText,
+                filter === 'person' && styles.filterTabTextActive,
+              ]}
+            >
+              Personas ({alerts.filter((a) => a.trigger_type === 'person_detected').length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.filterTab, filter === 'with_image' && styles.filterTabActive]}
             onPress={() => setFilter('with_image')}
           >
@@ -90,7 +105,7 @@ export const AlertsScreen: React.FC<AlertsScreenProps> = ({
                 filter === 'with_image' && styles.filterTabTextActive,
               ]}
             >
-              Con foto ({alerts.filter((a) => a.image_url).length})
+              Fotos ({alerts.filter((a) => a.image_url).length})
             </Text>
           </TouchableOpacity>
 
@@ -117,6 +132,8 @@ export const AlertsScreen: React.FC<AlertsScreenProps> = ({
           filteredAlerts.map((item) => {
             const hasImage = !!item.image_url;
             const imageUrl = hasImage ? getAlertImageUrl(item.id) : null;
+            const isPerson = item.trigger_type === 'person_detected';
+            const isMotion = item.trigger_type === 'motion_only' || item.trigger_type === 'change_detected';
 
             return (
               <TouchableOpacity
@@ -150,21 +167,27 @@ export const AlertsScreen: React.FC<AlertsScreenProps> = ({
                       <View
                         style={[
                           styles.priorityPill,
-                          item.trigger_type === 'change_detected'
+                          isPerson
                             ? styles.priorityCritical
+                            : isMotion
+                            ? styles.priorityMotion
                             : styles.priorityTest,
                         ]}
                       >
                         <Text
                           style={[
                             styles.priorityPillText,
-                            item.trigger_type === 'change_detected'
+                            isPerson
                               ? styles.priorityCriticalText
+                              : isMotion
+                              ? styles.priorityMotionText
                               : styles.priorityTestText,
                           ]}
                         >
-                          {item.trigger_type === 'change_detected'
-                            ? 'Intrusión'
+                          {isPerson
+                            ? '🚨 Persona'
+                            : isMotion
+                            ? 'Movimiento'
                             : 'Prueba manual'}
                         </Text>
                       </View>
@@ -340,6 +363,9 @@ const styles = StyleSheet.create({
   priorityCritical: {
     backgroundColor: '#fee2e2',
   },
+  priorityMotion: {
+    backgroundColor: '#fef3c7',
+  },
   priorityTest: {
     backgroundColor: Colors.surfaceContainer,
   },
@@ -349,6 +375,9 @@ const styles = StyleSheet.create({
   },
   priorityCriticalText: {
     color: Colors.tertiaryActive,
+  },
+  priorityMotionText: {
+    color: '#b45309',
   },
   priorityTestText: {
     color: Colors.primary,

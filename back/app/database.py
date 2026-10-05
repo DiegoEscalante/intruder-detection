@@ -58,6 +58,9 @@ def init_db():
             "mode": "away",  # Options: 'away' (Fuera de casa), 'home' (En casa), 'schedule' (Franjas)
             "alert_recipient": settings.ALERT_RECIPIENT,
             "smtp_enabled": "true" if settings.SMTP_ENABLED else "false",
+            "cooldown_seconds": str(settings.ALERT_COOLDOWN_SECONDS),
+            "person_cooldown_seconds": str(settings.PERSON_COOLDOWN_SECONDS),
+            "last_known_esp_ip": "10.162.220.76",
         }
         for k, v in defaults.items():
             cursor.execute(

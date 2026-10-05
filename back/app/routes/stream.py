@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from app.esp_client import esp_client
+from app.person_detector import person_detector
 
 router = APIRouter(prefix="/api", tags=["Video Streaming & Capture"])
 
@@ -51,3 +52,42 @@ async def proxy_mjpeg_stream():
         esp_client.stream_generator(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+
+@router.get("/detect-person")
+async def detect_person_now():
+    """
+    Fetches a live snapshot from ESP32-CAM and runs the Person Detection AI.
+    Returns detection results (person_detected, count, labels).
+    """
+    if not esp_client.ip:
+        raise HTTPException(status_code=503, detail="ESP32-CAM no disponible.")
+
+    image_bytes = await esp_client.fetch_snapshot()
+    if not image_bytes:
+        raise HTTPException(status_code=502, detail="Error obteniendo imagen desde ESP32-CAM.")
+
+    res = person_detector.detect_person(image_bytes)
+    return {
+        "person_detected": res["person_detected"],
+        "count": res["count"],
+        "labels": res["labels"]
+    }
+
+
+@router.get("/detect-person/annotated")
+async def detect_person_annotated():
+    """
+    Fetches a live snapshot from ESP32-CAM, runs the Person Detection AI,
+    and returns the annotated JPEG image with bounding boxes.
+    """
+    if not esp_client.ip:
+        raise HTTPException(status_code=503, detail="ESP32-CAM no disponible.")
+
+    image_bytes = await esp_client.fetch_snapshot()
+    if not image_bytes:
+        raise HTTPException(status_code=502, detail="Error obteniendo imagen desde ESP32-CAM.")
+
+    res = person_detector.detect_person(image_bytes)
+    return Response(content=res["annotated_bytes"], media_type="image/jpeg")
+

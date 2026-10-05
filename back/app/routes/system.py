@@ -34,7 +34,7 @@ def get_system_status():
         is_surveillance_active=is_active,
         active_reason=reason,
         esp32_connected=esp_client.is_connected,
-        esp32_ip=esp_client.ip,
+        esp32_ip=esp_client.current_ip,
         esp32_stream_url=esp_client.stream_url,
         last_seen_esp32=esp_client.last_seen.strftime("%Y-%m-%d %H:%M:%S") if esp_client.last_seen else None,
         server_time=now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -77,10 +77,12 @@ def get_configuration():
         smtp_host=settings.SMTP_HOST,
         smtp_port=settings.SMTP_PORT,
         smtp_user=settings.SMTP_USER,
-        cooldown_seconds=int(get_setting("cooldown_seconds", str(settings.ALERT_COOLDOWN_SECONDS)))
+        cooldown_seconds=int(get_setting("cooldown_seconds", str(settings.ALERT_COOLDOWN_SECONDS))),
+        person_cooldown_seconds=int(get_setting("person_cooldown_seconds", str(settings.PERSON_COOLDOWN_SECONDS)))
     )
 
 
+@router.put("/config")
 @router.post("/config")
 def update_configuration(config: ConfigUpdate):
     """Updates email alert and notification preferences."""
@@ -90,6 +92,8 @@ def update_configuration(config: ConfigUpdate):
         set_setting("smtp_enabled", "true" if config.smtp_enabled else "false")
     if config.cooldown_seconds is not None:
         set_setting("cooldown_seconds", str(config.cooldown_seconds))
+    if config.person_cooldown_seconds is not None:
+        set_setting("person_cooldown_seconds", str(config.person_cooldown_seconds))
 
     return {"message": "Configuración actualizada con éxito."}
 

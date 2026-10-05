@@ -76,10 +76,13 @@ async def send_alert_email(
     timestamp_str: str,
     reason: str,
     esp_ip: Optional[str],
-    image_bytes: Optional[bytes] = None
+    image_bytes: Optional[bytes] = None,
+    person_detected: bool = False,
+    labels: Optional[list[str]] = None
 ) -> bool:
     """
-    Asynchronously sends an intrusion alert email with cooldown protection.
+    Asynchronously sends an intrusion alert email with cooldown protection
+    and person detection highlighting.
     """
     global _last_email_sent_time
 
@@ -94,11 +97,22 @@ async def send_alert_email(
         print("[EmailService] No hay destinatario configurado para alertas.")
         return False
 
-    subject = f"🚨 ALERTA DE SEGURIDAD: Intruso detectado [{timestamp_str}]"
+    labels_str = f" ({', '.join(labels)})" if labels else ""
+    if person_detected:
+        subject = f"🚨 PERSONA DETECTADA: Humano identificado en cámara [{timestamp_str}]"
+        header_title = "🚨 Persona Detectada (Visión Artificial)"
+        header_bg = "#b91c1c"
+        description_text = f"El módulo de visión artificial (OpenCV) ha confirmado la presencia de una <strong>PERSONA</strong> en la zona vigilada{labels_str}. Se adjunta la captura con recuadros de detección."
+    else:
+        subject = f"⚠️ ALERTA DE SEGURIDAD: Movimiento detectado [{timestamp_str}]"
+        header_title = "⚠️ Movimiento Confirmado"
+        header_bg = "#d93025"
+        description_text = "Se ha detectado cambio visual/movimiento dentro de la franja horaria activa de vigilancia."
 
     body_text = (
         f"ALERTA DE SEGURIDAD - SISTEMA DE DETECCIÓN DE INTRUSOS\n"
         f"---------------------------------------------------\n"
+        f"Estado: {'PERSONA IDENTIFICADA' if person_detected else 'Movimiento Detectado'}\n"
         f"Fecha y Hora: {timestamp_str}\n"
         f"Causa / Franja: {reason}\n"
         f"Dispositivo ESP32-CAM: {esp_ip or 'Desconocido'}\n\n"
@@ -113,25 +127,27 @@ async def send_alert_email(
       <style>
         body {{ font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }}
         .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; border: 1px solid #e1e4e8; overflow: hidden; }}
-        .header {{ background-color: #d93025; color: white; padding: 20px; text-align: center; }}
+        .header {{ background-color: {header_bg}; color: white; padding: 20px; text-align: center; }}
         .content {{ padding: 24px; color: #333333; }}
         .data-row {{ margin-bottom: 12px; }}
         .label {{ font-weight: bold; color: #555555; }}
+        .badge {{ display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; background-color: #fee2e2; color: #b91c1c; font-size: 12px; }}
         .footer {{ background: #f8f9fa; padding: 12px; text-align: center; font-size: 12px; color: #888888; }}
       </style>
     </head>
     <body>
       <div class="card">
         <div class="header">
-          <h2 style="margin:0;">🚨 Intrusión Detectada</h2>
-          <p style="margin:5px 0 0 0; font-size:14px;">ESP32-S3 CAM Security System</p>
+          <h2 style="margin:0;">{header_title}</h2>
+          <p style="margin:5px 0 0 0; font-size:14px;">ESP32-S3 CAM Security System • OpenCV AI</p>
         </div>
         <div class="content">
-          <p>Se ha detectado actividad sospechosa dentro de la franja horaria activa de vigilancia.</p>
+          <p>{description_text}</p>
           <div class="data-row"><span class="label">Marca temporal:</span> {timestamp_str}</div>
           <div class="data-row"><span class="label">Motivo de activación:</span> {reason}</div>
           <div class="data-row"><span class="label">Dirección IP del Sensor:</span> {esp_ip or 'No disponible'}</div>
-          <p>Adjunto encontrarás la captura fotográfica tomada en el instante exacto de la intrusión.</p>
+          {f'<div class="data-row"><span class="badge">Identificación Humana: {", ".join(labels or ["Humano"])}</span></div>' if person_detected else ''}
+          <p>Adjunto encontrarás la captura fotográfica analizada en el instante exacto del evento.</p>
         </div>
         <div class="footer">
           Sistema de Detección de Intrusos IoT • Desarrollo Móvil

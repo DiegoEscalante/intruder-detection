@@ -45,6 +45,7 @@ class Settings:
     SMTP_PASS: str = os.getenv("SMTP_PASS", "")
     ALERT_RECIPIENT: str = os.getenv("ALERT_RECIPIENT", "")
     ALERT_COOLDOWN_SECONDS: int = int(os.getenv("ALERT_COOLDOWN_SECONDS", "60"))
+    PERSON_COOLDOWN_SECONDS: int = int(os.getenv("PERSON_COOLDOWN_SECONDS", "30"))
 
     @property
     def ADVERTISED_IP(self) -> str:

@@ -57,6 +57,7 @@ class ConfigUpdate(BaseModel):
     smtp_user: Optional[str] = None
     smtp_pass: Optional[str] = None
     cooldown_seconds: Optional[int] = None
+    person_cooldown_seconds: Optional[int] = None
 
 
 class ConfigOut(BaseModel):
@@ -66,6 +67,7 @@ class ConfigOut(BaseModel):
     smtp_port: int
     smtp_user: str
     cooldown_seconds: int
+    person_cooldown_seconds: int = 30
 
 
 class StatusOut(BaseModel):

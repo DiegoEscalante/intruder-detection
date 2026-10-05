@@ -39,6 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [config, setConfig] = useState<ConfigSettings | null>(null);
   const [recipient, setRecipient] = useState('');
   const [cooldown, setCooldown] = useState('60');
+  const [personCooldown, setPersonCooldown] = useState('30');
   const [smtpEnabled, setSmtpEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -61,6 +62,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setConfig(cfg);
       setRecipient(cfg.alert_recipient);
       setCooldown(String(cfg.cooldown_seconds));
+      setPersonCooldown(String(cfg.person_cooldown_seconds || 30));
       setSmtpEnabled(cfg.smtp_enabled);
     } catch {
       // Offline fallback
@@ -95,6 +97,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       await updateConfig({
         alert_recipient: recipient.trim(),
         cooldown_seconds: parseInt(cooldown, 10) || 60,
+        person_cooldown_seconds: parseInt(personCooldown, 10) || 30,
         smtp_enabled: smtpEnabled,
       });
       Alert.alert('Éxito', 'Configuración guardada correctamente.');
@@ -253,7 +256,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
 
                   <Text style={[styles.label, { marginTop: 10 }]}>
-                    Cooldown entre correos (Segundos)
+                    Cooldown para Notificaciones de Movimiento (segundos)
                   </Text>
                   <TextInput
                     style={styles.input}
@@ -263,7 +266,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     keyboardType="numeric"
                   />
                   <Text style={styles.hintText}>
-                    Evita spam si hay detecciones continuas de movimiento.
+                    Evita spam mientras el ESP32 envía eventos y ráfagas a alto FPS.
+                  </Text>
+
+                  <Text style={[styles.label, { marginTop: 10 }]}>
+                    Cooldown para Alertas de Persona Detectada (segundos)
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    value={personCooldown}
+                    onChangeText={setPersonCooldown}
+                    placeholder="30"
+                    keyboardType="numeric"
+                  />
+                  <Text style={styles.hintText}>
+                    Independiente del movimiento. Notifica de inmediato si se detecta una persona.
                   </Text>
                 </View>
 
