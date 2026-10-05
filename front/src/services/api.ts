@@ -165,3 +165,15 @@ export async function detectPersonNow(): Promise<{
   return request('/api/detect-person');
 }
 
+export async function updateEspWifi(ssid: string, password: string): Promise<{
+  status: string;
+  message: string;
+  esp_ip: string;
+}> {
+  return request('/api/esp/wifi', {
+    method: 'POST',
+    body: JSON.stringify({ ssid, password }),
+  });
+}
+
+

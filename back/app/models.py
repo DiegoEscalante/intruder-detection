@@ -6,6 +6,11 @@ class EspEvent(BaseModel):
     type: str = Field(..., description="Event type emitted by ESP32, e.g. 'change_detected'")
 
 
+class EspWifiUpdate(BaseModel):
+    ssid: str = Field(..., min_length=1, description="SSID de la red Wi-Fi")
+    password: str = Field(default="", description="Contraseña de la red Wi-Fi")
+
+
 class ModeUpdate(BaseModel):
     mode: str = Field(
         ...,

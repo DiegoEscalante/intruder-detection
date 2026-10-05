@@ -35,6 +35,12 @@ async def dispatch_person_alert(
     """Dispatches a high-priority person detection alert to DB, WebSocket and Email."""
     global _last_person_notification_time, _last_motion_notification_time
 
+    # Guard: only dispatch and record if surveillance schedule / mode is active
+    is_active, reason = is_surveillance_active()
+    if not is_active:
+        print(f"[Surveillance] Detección de persona ignorada: {reason}.")
+        return False
+
     now_time = time.time()
     motion_cd, person_cd = get_cooldowns()
     time_since_last_person = now_time - _last_person_notification_time
@@ -111,6 +117,12 @@ async def dispatch_motion_alert(
 ) -> bool:
     """Dispatches a motion alert if motion cooldown has elapsed."""
     global _last_motion_notification_time
+
+    # Guard: only dispatch and record if surveillance schedule / mode is active
+    is_active, reason = is_surveillance_active()
+    if not is_active:
+        print(f"[Surveillance] Movimiento ignorado: {reason}.")
+        return False
 
     now_time = time.time()
     motion_cd, _ = get_cooldowns()

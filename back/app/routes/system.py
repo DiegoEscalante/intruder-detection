@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from datetime import datetime
-from app.models import StatusOut, ModeUpdate, ConfigUpdate, ConfigOut
+import httpx
+from app.models import StatusOut, ModeUpdate, ConfigUpdate, ConfigOut, EspWifiUpdate
 from app.database import get_db, get_setting, set_setting
 from app.schedule_service import get_current_mode, set_current_mode, is_surveillance_active
 from app.esp_client import esp_client
@@ -139,8 +140,11 @@ async def trigger_test_alert(background_tasks: BackgroundTasks):
         send_alert_email,
         timestamp_str,
         reason,
-        esp_client.ip,
-        image_bytes
+        esp_client.current_ip,
+        image_bytes,
+        False,
+        None,
+        True  # bypass_cooldown
     )
 
     return {
@@ -149,3 +153,33 @@ async def trigger_test_alert(background_tasks: BackgroundTasks):
         "timestamp": timestamp_str,
         "image_saved": image_bytes is not None
     }
+
+
+@router.post("/esp/wifi")
+async def update_esp32_wifi(wifi_data: EspWifiUpdate):
+    """
+    Sends new Wi-Fi credentials to the ESP32-CAM HTTP server (/save).
+    The ESP32 stores them in non-volatile flash (Preferences) and reconnects.
+    """
+    ip = esp_client.current_ip
+    if not ip:
+        raise HTTPException(
+            status_code=503,
+            detail="ESP32-CAM no detectado en la red. Conéctate a su AP 'ESP32-CAM-Setup' (192.168.50.1) si está fuera de línea."
+        )
+
+    url = f"http://{ip}/save"
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            res = await client.post(
+                url,
+                data={"ssid": wifi_data.ssid, "password": wifi_data.password}
+            )
+            return {
+                "status": "success",
+                "message": f"Credenciales enviadas al ESP32 ({wifi_data.ssid}). El microcontrolador se reiniciará para conectarse.",
+                "esp_ip": ip
+            }
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Error enviando credenciales al ESP32 ({url}): {e}")
+

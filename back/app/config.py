@@ -37,13 +37,36 @@ class Settings:
     EVIDENCE_DIR: Path = BASE_DIR / os.getenv("EVIDENCE_DIR", "evidence")
     DATABASE_PATH: Path = BASE_DIR / os.getenv("DATABASE_PATH", "data/intruder.db")
 
-    # Email / SMTP configuration
-    SMTP_ENABLED: bool = os.getenv("SMTP_ENABLED", "false").lower() in ("true", "1", "yes")
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-    SMTP_USER: str = os.getenv("SMTP_USER", "")
-    SMTP_PASS: str = os.getenv("SMTP_PASS", "")
-    ALERT_RECIPIENT: str = os.getenv("ALERT_RECIPIENT", "")
+    @property
+    def SMTP_ENABLED(self) -> bool:
+        load_dotenv(BASE_DIR / ".env", override=True)
+        return os.getenv("SMTP_ENABLED", "false").lower() in ("true", "1", "yes")
+
+    @property
+    def SMTP_HOST(self) -> str:
+        load_dotenv(BASE_DIR / ".env", override=True)
+        return os.getenv("SMTP_HOST", "smtp.gmail.com")
+
+    @property
+    def SMTP_PORT(self) -> int:
+        load_dotenv(BASE_DIR / ".env", override=True)
+        return int(os.getenv("SMTP_PORT", "587"))
+
+    @property
+    def SMTP_USER(self) -> str:
+        load_dotenv(BASE_DIR / ".env", override=True)
+        return os.getenv("SMTP_USER", "")
+
+    @property
+    def SMTP_PASS(self) -> str:
+        load_dotenv(BASE_DIR / ".env", override=True)
+        return os.getenv("SMTP_PASS", "")
+
+    @property
+    def ALERT_RECIPIENT(self) -> str:
+        load_dotenv(BASE_DIR / ".env", override=True)
+        return os.getenv("ALERT_RECIPIENT", "")
+
     ALERT_COOLDOWN_SECONDS: int = int(os.getenv("ALERT_COOLDOWN_SECONDS", "60"))
     PERSON_COOLDOWN_SECONDS: int = int(os.getenv("PERSON_COOLDOWN_SECONDS", "30"))
 

@@ -78,7 +78,8 @@ async def send_alert_email(
     esp_ip: Optional[str],
     image_bytes: Optional[bytes] = None,
     person_detected: bool = False,
-    labels: Optional[list[str]] = None
+    labels: Optional[list[str]] = None,
+    bypass_cooldown: bool = False
 ) -> bool:
     """
     Asynchronously sends an intrusion alert email with cooldown protection
@@ -88,7 +89,7 @@ async def send_alert_email(
 
     cooldown = int(get_setting("cooldown_seconds", str(settings.ALERT_COOLDOWN_SECONDS)))
     now = time.time()
-    if now - _last_email_sent_time < cooldown:
+    if not bypass_cooldown and (now - _last_email_sent_time < cooldown):
         print(f"[EmailService] Alerta omitida por cooldown ({int(cooldown - (now - _last_email_sent_time))}s restantes).")
         return False
 

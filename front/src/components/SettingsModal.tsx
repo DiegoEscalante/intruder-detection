@@ -20,6 +20,7 @@ import {
   updateConfig,
   triggerManualTestAlert,
   fetchSystemStatus,
+  updateEspWifi,
 } from '../services/api';
 import { wsClient } from '../services/websocket';
 import { ConfigSettings } from '../types';
@@ -41,6 +42,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [cooldown, setCooldown] = useState('60');
   const [personCooldown, setPersonCooldown] = useState('30');
   const [smtpEnabled, setSmtpEnabled] = useState(false);
+  const [espSsid, setEspSsid] = useState('');
+  const [espPassword, setEspPassword] = useState('');
+  const [isUpdatingWifi, setIsUpdatingWifi] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isTriggeringTest, setIsTriggeringTest] = useState(false);
@@ -123,6 +127,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       Alert.alert('Error en prueba', err.message || 'Fallo al disparar alerta de prueba.');
     } finally {
       setIsTriggeringTest(false);
+    }
+  };
+
+  const handleUpdateEspWifi = async () => {
+    if (!espSsid.trim()) {
+      Alert.alert('Error', 'Debes ingresar el nombre de la red Wi-Fi (SSID).');
+      return;
+    }
+    setIsUpdatingWifi(true);
+    try {
+      const res = await updateEspWifi(espSsid.trim(), espPassword);
+      Alert.alert(
+        'Credenciales Enviadas',
+        `El ESP32 ha recibido la nueva red:\nSSID: ${espSsid.trim()}\n\nEl dispositivo se reiniciará para conectarse a la nueva red Wi-Fi.`
+      );
+      setEspSsid('');
+      setEspPassword('');
+    } catch (err: any) {
+      Alert.alert(
+        'Fallo al actualizar Wi-Fi',
+        err.message || 'No se pudo comunicar con el ESP32. Verifica que el ESP32 esté encendido y en línea.'
+      );
+    } finally {
+      setIsUpdatingWifi(false);
     }
   };
 
@@ -284,6 +312,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </Text>
                 </View>
 
+                {/* 4. Cambiar Red Wi-Fi del ESP32-CAM */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Reconfigurar Wi-Fi del ESP32-CAM</Text>
+                  <Text style={styles.sectionDesc}>
+                    Cambia la red Wi-Fi a la que se conecta el ESP32 sin necesidad de flashearlo ni resetearlo de fábrica.
+                  </Text>
+                  <Text style={styles.label}>Nombre de la Red Wi-Fi (SSID)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={espSsid}
+                    onChangeText={setEspSsid}
+                    placeholder="MiRedWiFi_2.4G"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <Text style={[styles.label, { marginTop: 10 }]}>Contraseña Wi-Fi</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={espPassword}
+                    onChangeText={setEspPassword}
+                    placeholder="Contraseña de la red"
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity
+                    style={[styles.wifiBtn, isUpdatingWifi && { opacity: 0.6 }]}
+                    onPress={handleUpdateEspWifi}
+                    disabled={isUpdatingWifi}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialCommunityIcons name="wifi-sync" size={20} color="#ffffff" />
+                    <Text style={styles.wifiBtnText}>
+                      {isUpdatingWifi ? 'Enviando a ESP32...' : 'Actualizar Wi-Fi del ESP32'}
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={styles.hintText}>
+                    Nota: Si el ESP32 no tiene conexión actual, se creará el punto de acceso "ESP32-CAM-Setup" (clave: 12345678) en http://192.168.50.1.
+                  </Text>
+                </View>
+
                 {/* Save button */}
                 <TouchableOpacity
                   style={[styles.saveBtn, isLoading && { opacity: 0.6 }]}
@@ -333,6 +401,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </Text>
                   <Text style={styles.defenseAnswer}>
                     Se implementa un mecanismo de <Text style={styles.bold}>Cooldown</Text> (por defecto 60s). Si se detecta movimiento mientras el cooldown está activo, el incidente se guarda en SQLite y se alerta por WebSocket a la app, pero el correo SMTP se suprime temporalmente para no saturar la bandeja.
+                  </Text>
+                </View>
+
+                <View style={styles.defenseCard}>
+                  <Text style={styles.defenseQuestion}>
+                    5. ¿Cómo se reconfigura la red Wi-Fi del ESP32 en campo sin reprogramarlo?
+                  </Text>
+                  <Text style={styles.defenseAnswer}>
+                    El ESP32 almacena las credenciales en su memoria no volátil <Text style={styles.bold}>NVS (Preferences)</Text>. Si está conectado, recibe el cambio vía HTTP (`POST /save`). Si no logra conectarse en 10s tras encenderse, activa automáticamente un <Text style={styles.bold}>Access Point de rescate ("ESP32-CAM-Setup")</Text> en la IP `192.168.50.1`, permitiendo configurarlo desde cualquier navegador móvil sin cables.
                   </Text>
                 </View>
               </View>
@@ -515,6 +592,21 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   testAlertBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  wifiBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.secondaryActive,
+    height: 46,
+    borderRadius: BorderRadius.md,
+    gap: 8,
+    marginTop: 10,
+  },
+  wifiBtnText: {
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',

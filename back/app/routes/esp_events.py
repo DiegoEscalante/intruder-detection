@@ -29,13 +29,8 @@ async def receive_esp_event(event: EspEvent, request: Request, background_tasks:
     print(f"[Event] Evento recibido desde ESP32 ({client_ip}): {event.type}. Estado vigilancia: {is_active} ({reason})")
 
     if not is_active:
-        # Surveillance is disarmed or outside active schedule; log incident as ignored
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO alerts (timestamp, trigger_type, reason, image_path, email_sent, details)
-                VALUES (?, ?, ?, ?, ?, ?);
-            """, (timestamp_str, event.type, reason, None, 0, "Evento descartado: Sistema desarmado o fuera de horario"))
+        # Surveillance is disarmed (home) or outside schedule: do NOT log alert, do NOT notify
+        print(f"[Event] Evento descartado ({client_ip}): {reason}. Sistema desarmado o fuera de horario.")
         return {"status": "ignored", "reason": reason}
 
     # Surveillance is active: schedule multi-frame burst inspection during the high-FPS window.
