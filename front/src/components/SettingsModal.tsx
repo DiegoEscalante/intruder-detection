@@ -24,6 +24,10 @@ import {
 } from '../services/api';
 import { wsClient } from '../services/websocket';
 import { ConfigSettings } from '../types';
+import {
+  triggerIntrusionNotification,
+  registerForPushNotificationsAsync,
+} from '../services/notifications';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -154,6 +158,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const handleTestNativeNotification = async () => {
+    const granted = await registerForPushNotificationsAsync();
+    if (!granted) {
+      Alert.alert(
+        'Permiso Requerido',
+        'En Android 14 (XOS v14) debes autorizar las notificaciones de la aplicación cuando el sistema lo solicite.'
+      );
+      return;
+    }
+    await triggerIntrusionNotification({
+      title: '🚨 INTRUSIÓN DE PRUEBA (XOS 14)',
+      body: 'Canal de alerta con sonido y vibración funcionando en tu Infinix Note 30 Pro.',
+      data: { test: true },
+    });
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -203,7 +223,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       style={styles.input}
                       value={serverUrl}
                       onChangeText={setServerUrl}
-                      placeholder="http://10.162.220.76:8000"
+                      placeholder="http://10.232.157.38:8000"
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
@@ -257,6 +277,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <MaterialCommunityIcons name="bell-ring-outline" size={20} color="#ffffff" />
                     <Text style={styles.testAlertBtnText}>
                       {isTriggeringTest ? 'Disparando evento...' : 'Disparar Alerta Manual de Prueba'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.testAlertBtn, { backgroundColor: Colors.primary, marginTop: 10 }]}
+                    onPress={handleTestNativeNotification}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="notifications-outline" size={20} color="#ffffff" />
+                    <Text style={styles.testAlertBtnText}>
+                      Probar Notificación Nativa (Infinix / XOS 14)
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -410,6 +441,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </Text>
                   <Text style={styles.defenseAnswer}>
                     El ESP32 almacena las credenciales en su memoria no volátil <Text style={styles.bold}>NVS (Preferences)</Text>. Si está conectado, recibe el cambio vía HTTP (`POST /save`). Si no logra conectarse en 10s tras encenderse, activa automáticamente un <Text style={styles.bold}>Access Point de rescate ("ESP32-CAM-Setup")</Text> en la IP `192.168.50.1`, permitiendo configurarlo desde cualquier navegador móvil sin cables.
+                  </Text>
+                </View>
+
+                <View style={styles.defenseCard}>
+                  <Text style={styles.defenseQuestion}>
+                    6. ¿Cómo gestiona la app móvil el ciclo de vida y las alertas en segundo plano (Android 14 / XOS 14)?
+                  </Text>
+                  <Text style={styles.defenseAnswer}>
+                    • <Text style={styles.bold}>Permiso POST_NOTIFICATIONS</Text>: En Android 13+ (como XOS v14 en el Infinix Note 30 Pro), el permiso de notificaciones es en tiempo de ejecución. La app lo solicita automáticamente al inicio.{'\n'}
+                    • <Text style={styles.bold}>Canales con Prioridad MAX</Text>: Las alertas de intrusión se canalizan con importancia máxima (`AndroidImportance.MAX`), sonido, vibración de pulso táctico y visibilidad pública en pantalla de bloqueo (heads-up banners).{'\n'}
+                    • <Text style={styles.bold}>Supervisión de Estado Persistente</Text>: Al armar el sistema, se crea una notificación persistente de seguridad en el sistema.{'\n'}
+                    • <Text style={styles.bold}>Recuperación con AppState</Text>: Cuando la app pasa a segundo plano o se bloquea la pantalla y el usuario la reabre, el listener `AppState` restablece la conexión del WebSocket y resincroniza todo el estado del sistema.
                   </Text>
                 </View>
               </View>

@@ -12,10 +12,22 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.sentinel.esp32security",
+      "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "POST_NOTIFICATIONS",
+        "VIBRATE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_DATA_SYNC",
+        "WAKE_LOCK"
       ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8b3eefcf-0a8e-4c70-b6a6-a9a015a1fe17"
+      }
     }
   }
 }

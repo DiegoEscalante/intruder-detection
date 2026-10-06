@@ -1,11 +1,35 @@
 # =====================================================
-# Python & Virtual Environments (NEVER COMMIT .venv)
+# Environment Secrets & Local Data (CRITICAL: NEVER COMMIT)
+# =====================================================
+.env
+*.env
+.env.*
+*.env.backup
+!*.env.example
+
+# Local SQLite databases & local runtime data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db.backup
+back/data/*.db
+back/data/*.db-journal
+
+# Captured surveillance evidence
+back/evidence/*
+!back/evidence/.gitkeep
+
+# =====================================================
+# Python & Virtual Environments
 # =====================================================
 .venv/
 venv/
 env/
 ENV/
+__pycache__/
 */__pycache__/
+*/*/__pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
@@ -13,20 +37,29 @@ dist/
 build/
 
 # =====================================================
-# Environment Secrets & Local Data
+# Node.js & React Native / Expo Mobile
 # =====================================================
-.env
-*.env
-!*.env.example
-
-# Local SQLite databases & captured evidence images
-back/data/*.db
-back/data/*.db-journal
-back/evidence/*.jpg
-back/evidence/*.png
+node_modules/
+front/node_modules/
+.expo/
+front/.expo/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 
 # =====================================================
-# PlatformIO & Embedded (ESP32)
+# Android Native Build Outputs & Gradle Cache
+# =====================================================
+front/android/.gradle/
+front/android/build/
+front/android/app/build/
+front/android/local.properties
+front/android/.cxx/
+front/android/*.iml
+front/android/app/*.iml
+
+# =====================================================
+# PlatformIO & Embedded Firmware (ESP32)
 # =====================================================
 .pio/
 esp32-cam/.pio/
@@ -42,3 +75,6 @@ esp32-cam/.pio/
 Thumbs.db
 *.swp
 .idea/
+*/.idea/
+*/*/.idea/
+*.iml

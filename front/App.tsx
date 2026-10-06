@@ -29,8 +29,19 @@ import {
   deleteSchedule,
   fetchAlerts,
   deleteAlert,
+  getBaseUrl,
 } from './src/services/api';
 import { wsClient } from './src/services/websocket';
+import {
+  registerForPushNotificationsAsync,
+  triggerIntrusionNotification,
+  updateSurveillanceStatusNotification,
+  addNotificationListener,
+} from './src/services/notifications';
+import {
+  startSurveillanceForegroundService,
+  stopSurveillanceForegroundService,
+} from './src/services/foregroundService';
 
 import { Header } from './src/components/Header';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -38,6 +49,7 @@ import { SchedulesScreen } from './src/screens/SchedulesScreen';
 import { AlertsScreen } from './src/screens/AlertsScreen';
 import { AlertDetailModal } from './src/components/AlertDetailModal';
 import { SettingsModal } from './src/components/SettingsModal';
+import { NotificationBanner } from './src/components/NotificationBanner';
 
 type ActiveTab = 'inicio' | 'horarios' | 'alertas';
 
@@ -51,6 +63,17 @@ export default function App() {
   // Modals
   const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
+
+  // Floating Heads-up Intrusion Banner state
+  const [bannerNotification, setBannerNotification] = useState<{
+    visible: boolean;
+    title: string;
+    body: string;
+  }>({
+    visible: false,
+    title: '',
+    body: '',
+  });
 
   // AppState monitoring for lifecycle awareness
   const appState = useRef(AppState.currentState);
@@ -66,7 +89,22 @@ export default function App() {
       ]);
 
       if (statusRes.status === 'fulfilled') {
-        setStatus(statusRes.value);
+        const s = statusRes.value;
+        setStatus(s);
+        const modeLabel =
+          s.system_mode === 'away'
+            ? 'Fuera de casa'
+            : s.system_mode === 'home'
+            ? 'En casa'
+            : 'Por Horario';
+        updateSurveillanceStatusNotification(s.is_surveillance_active, modeLabel);
+
+        // Native Android Foreground Service management
+        if (s.is_surveillance_active) {
+          startSurveillanceForegroundService(getBaseUrl());
+        } else {
+          stopSurveillanceForegroundService();
+        }
       }
       if (schedRes.status === 'fulfilled') {
         setSchedules(schedRes.value);
@@ -81,8 +119,11 @@ export default function App() {
     }
   }, []);
 
-  // Set up WebSocket & AppState lifecycle listener
+  // Set up WebSocket, Notifications & AppState lifecycle listener
   useEffect(() => {
+    // 0. Initialize Android 14 / XOS 14 notification channels & request permissions
+    registerForPushNotificationsAsync();
+
     // 1. Initial sync
     refreshAllData();
 
@@ -93,11 +134,21 @@ export default function App() {
       if (event === 'alert') {
         // High priority intrusion alert received in real-time
         refreshAllData();
-        Alert.alert(
-          '🚨 INTRUSIÓN CONFIRMADA',
-          `Se ha detectado movimiento sospechoso.\nMotivo: ${data.reason || 'Diferencia visual de cuadros'}\nHora: ${data.timestamp || 'Ahora'}`
-        );
-      } else if (event === 'mode_change') {
+
+        const isPerson = data.trigger_type === 'person_detected';
+        const alertTitle = isPerson ? '🚨 PERSONA DETECTADA' : '⚠️ INTRUSIÓN DETECTADA';
+        const alertBody = `${data.reason || 'Diferencia visual de cuadros'}\nHora: ${data.timestamp || 'Ahora'}`;
+
+        // Trigger native notification (banner, sound, vibration) for foreground/background
+        triggerIntrusionNotification({
+          title: alertTitle,
+          body: alertBody,
+          data: { alertId: data.id, timestamp: data.timestamp },
+        });
+
+        // In-app modal alert
+        Alert.alert(alertTitle, alertBody);
+      } else if (event === 'mode_change' || event === 'mode_changed') {
         setStatus((prev) =>
           prev
             ? {
@@ -108,6 +159,20 @@ export default function App() {
               }
             : null
         );
+        const modeLabel =
+          data.mode === 'away'
+            ? 'Fuera de casa'
+            : data.mode === 'home'
+            ? 'En casa'
+            : 'Por Horario';
+        updateSurveillanceStatusNotification(data.active, modeLabel);
+
+        // Native Android Foreground Service
+        if (data.active) {
+          startSurveillanceForegroundService(getBaseUrl());
+        } else {
+          stopSurveillanceForegroundService();
+        }
       }
     });
 
@@ -126,9 +191,19 @@ export default function App() {
       appState.current = nextAppState;
     });
 
+    // 4. In-App Heads-up Notification Listener
+    const unsubNotification = addNotificationListener((notif) => {
+      setBannerNotification({
+        visible: true,
+        title: notif.title,
+        body: notif.body,
+      });
+    });
+
     return () => {
       unsubscribeWs();
       subscription.remove();
+      unsubNotification();
       wsClient.disconnect();
     };
   }, [refreshAllData]);
@@ -147,6 +222,20 @@ export default function App() {
             }
           : null
       );
+      const modeLabel =
+        res.mode === 'away'
+          ? 'Fuera de casa'
+          : res.mode === 'home'
+          ? 'En casa'
+          : 'Por Horario';
+      updateSurveillanceStatusNotification(res.active, modeLabel);
+
+      // Native Android Foreground Service
+      if (res.active) {
+        startSurveillanceForegroundService(getBaseUrl());
+      } else {
+        stopSurveillanceForegroundService();
+      }
     } catch (err: any) {
       Alert.alert('Error', err.message || 'No se pudo cambiar el modo de vigilancia.');
     }
@@ -205,6 +294,20 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <StatusBar style="dark" />
+
+        {/* Real-time Floating Heads-up Intrusion Banner */}
+        <NotificationBanner
+          visible={bannerNotification.visible}
+          title={bannerNotification.title}
+          body={bannerNotification.body}
+          onPress={() => {
+            setActiveTab('alertas');
+            refreshAllData();
+          }}
+          onDismiss={() =>
+            setBannerNotification((prev) => ({ ...prev, visible: false }))
+          }
+        />
 
         {/* Global App Header */}
         <Header

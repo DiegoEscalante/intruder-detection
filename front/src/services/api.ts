@@ -9,8 +9,8 @@ import {
   ConfigSettings,
 } from '../types';
 
-// Default backend IP based on the active ESP32 LAN subnet
-let CURRENT_BASE_URL = 'http://10.162.220.76:8000';
+// Default backend IP based on current active Wi-Fi LAN subnet
+let CURRENT_BASE_URL = 'http://10.232.157.38:8000';
 
 export function getBaseUrl(): string {
   return CURRENT_BASE_URL;
